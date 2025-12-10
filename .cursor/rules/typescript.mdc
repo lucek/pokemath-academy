@@ -1,0 +1,32 @@
+---
+description: 
+globs: *.ts,*.tsx
+alwaysApply: false
+---
+## TypeScript
+
+### General guidelines
+
+- Use **TypeScript 5** in strict mode (inherited from `astro/tsconfigs/strict`).
+- Avoid the `any` type; prefer `unknown`, more precise domain types, or generics.
+- Prefer **explicit type definitions** (`type`, `interface`, unions, intersections) over loose object shapes.
+- Always type public APIs: parameters and return types of exported functions.
+
+### Functions and return types
+
+- Add **explicit return types** to exported functions, hooks, and services (`src/lib`).
+- For small internal helpers in a module, relying on inference is acceptable as long as the code stays readable.
+- Prefer **pure functions** (no side effects) unless the function is clearly an IO service (e.g. calling Supabase).
+
+### Narrowing and type safety
+
+- Use **type narrowing** (type checks, optional chaining, comparison operators) instead of casting with `as` whenever possible.
+- Use **discriminated unions** to model states (for example `status: "idle" | "loading" | "error" | "success"`).
+- For external data (APIs, Supabase, forms), rely on Zod schemas as the single source of truth for types (see `zod.mdc`).
+
+### Tools and patterns
+
+- In React, rely on JSX‑inferred types (`React.FC` is optional; prefer explicitly typed props).
+- Use generics for hooks when their return type depends on the input parameters.
+- For UI helpers (for example `cn` in `src/lib/utils.ts`), keep function signatures simple but well typed.
+
