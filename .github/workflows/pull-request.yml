@@ -123,7 +123,12 @@ jobs:
       - unit-tests
       - e2e-tests
     runs-on: ubuntu-latest
+    outputs:
+      coverage_table: ${{ steps.coverage-summary.outputs.coverage_table }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Download unit coverage
         uses: actions/download-artifact@v5
         with:
@@ -135,6 +140,71 @@ jobs:
         with:
           name: e2e-coverage
           path: coverage/e2e
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Generate coverage summary
+        id: coverage-summary
+        run: |
+          node <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+
+          const candidates = [
+            { label: 'Unit', path: path.join('coverage', 'unit', 'coverage-summary.json') },
+            { label: 'Unit', path: path.join('coverage', 'unit', 'coverage', 'coverage-summary.json') },
+            { label: 'E2E', path: path.join('coverage', 'e2e', 'coverage-summary.json') },
+            { label: 'E2E', path: path.join('coverage', 'e2e', 'coverage', 'coverage-summary.json') },
+          ];
+
+          const rows = [];
+          const formatPct = (value) => (typeof value === 'number' ? value.toFixed(1) : 'n/a');
+          const statusIcon = (pct) => {
+            if (typeof pct !== 'number') return '⚪️';
+            if (pct >= 90) return '🟢';
+            if (pct >= 75) return '🟡';
+            return '🔴';
+          };
+
+          for (const candidate of candidates) {
+            if (!fs.existsSync(candidate.path)) continue;
+
+            const summary = JSON.parse(fs.readFileSync(candidate.path, 'utf8'));
+            const totals = summary.total;
+            const suite = {
+              label: candidate.label,
+              icon: statusIcon(totals?.lines?.pct),
+              lines: formatPct(totals?.lines?.pct),
+              branches: formatPct(totals?.branches?.pct),
+              functions: formatPct(totals?.functions?.pct),
+              statements: formatPct(totals?.statements?.pct),
+            };
+
+            if (rows.some((row) => row.label === suite.label)) continue;
+            rows.push(suite);
+          }
+
+          const table = rows.length
+            ? [
+                '| Suite | Lines | Branches | Functions | Statements |',
+                '| --- | --- | --- | --- | --- |',
+                ...rows.map(
+                  (row) =>
+                    `| ${row.icon} ${row.label} | ${row.lines}% | ${row.branches}% | ${row.functions}% | ${row.statements}% |`,
+                ),
+              ].join('\n')
+            : '_No coverage summary files found._';
+
+          const summaryPath = path.join('coverage', 'coverage-summary.md');
+          fs.mkdirSync(path.dirname(summaryPath), { recursive: true });
+          fs.writeFileSync(summaryPath, table);
+
+          const output = ['coverage_table<<EOF', table, 'EOF'].join('\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+          NODE
 
       - name: Bundle coverage
         run: tar -czf coverage-bundle.tar.gz coverage
@@ -167,6 +237,7 @@ jobs:
           E2E_RESULT: ${{ needs.e2e-tests.result }}
           SECURITY_RESULT: ${{ needs.security-scan.result }}
           COVERAGE_RESULT: ${{ needs.coverage-report.result }}
+          COVERAGE_TABLE: ${{ needs.coverage-report.outputs.coverage_table }}
         with:
           script: |
             const results = {
@@ -191,11 +262,17 @@ jobs:
               `- E2E Tests: ${icon(results.e2e)} \`${results.e2e}\``,
               `- Security Scan: ${icon(results.security)} \`${results.security}\``,
               `- Coverage Report: ${icon(results.coverage)} \`${results.coverage}\``,
-            ].join('\n');
+            ];
+
+            if (process.env.COVERAGE_TABLE) {
+              body.push('', '### Coverage Summary', process.env.COVERAGE_TABLE);
+            }
+
+            const bodyText = body.join('\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body,
+              body: bodyText,
             });
