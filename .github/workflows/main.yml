@@ -1,7 +1,7 @@
-name: Pull Request CI
+name: Main Branch CI
 
 on:
-  pull_request:
+  push:
     branches:
       - main
   workflow_dispatch:
@@ -145,16 +145,6 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Install dependencies (coverage tooling)
-        run: npm ci --omit=optional
-
-      - name: Build E2E coverage summary
-        run: |
-          npx c8 report \
-            --reporter=json-summary \
-            --reports-dir=coverage/e2e/coverage \
-            --temp-directory=coverage/e2e
-
       - name: Generate coverage summary
         id: coverage-summary
         run: |
@@ -224,64 +214,3 @@ jobs:
           name: coverage-bundle
           path: coverage-bundle.tar.gz
 
-  status-comment:
-    name: Status Comment
-    needs:
-      - lint
-      - unit-tests
-      - e2e-tests
-      - security-scan
-      - coverage-report
-    runs-on: ubuntu-latest
-    if: always()
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Add PR status comment
-        uses: actions/github-script@v8
-        env:
-          LINT_RESULT: ${{ needs.lint.result }}
-          UNIT_RESULT: ${{ needs.unit-tests.result }}
-          E2E_RESULT: ${{ needs.e2e-tests.result }}
-          SECURITY_RESULT: ${{ needs.security-scan.result }}
-          COVERAGE_RESULT: ${{ needs.coverage-report.result }}
-          COVERAGE_TABLE: ${{ needs.coverage-report.outputs.coverage_table }}
-        with:
-          script: |
-            const results = {
-              lint: process.env.LINT_RESULT,
-              unit: process.env.UNIT_RESULT,
-              e2e: process.env.E2E_RESULT,
-              security: process.env.SECURITY_RESULT,
-              coverage: process.env.COVERAGE_RESULT,
-            };
-
-            const icon = (status) => {
-              if (status === 'success') return '✅';
-              if (status === 'skipped') return '⚠️';
-              return '❌';
-            };
-
-            const body = [
-              '## Pull Request CI Status',
-              '',
-              `- Lint: ${icon(results.lint)} \`${results.lint}\``,
-              `- Unit Tests: ${icon(results.unit)} \`${results.unit}\``,
-              `- E2E Tests: ${icon(results.e2e)} \`${results.e2e}\``,
-              `- Security Scan: ${icon(results.security)} \`${results.security}\``,
-              `- Coverage Report: ${icon(results.coverage)} \`${results.coverage}\``,
-            ];
-
-            if (process.env.COVERAGE_TABLE) {
-              body.push('', '### Coverage Summary', process.env.COVERAGE_TABLE);
-            }
-
-            const bodyText = body.join('\n');
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: bodyText,
-            });
