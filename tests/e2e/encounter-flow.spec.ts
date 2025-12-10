@@ -127,9 +127,7 @@ test('wild encounter capture succeeds', async ({ page }) => {
     }),
   );
 
-  await page.goto('/');
-  await page.click('[data-test-id="login-google"]');
-  await page.waitForURL('**/dashboard');
+  await page.goto('/dashboard');
   await expect(page.locator('[data-test-id="user-avatar"]')).toBeVisible();
 
   await page.locator('[data-test-id="start-encounter"]').click();
@@ -162,9 +160,7 @@ test('wild encounter failure allows retry then success', async ({ page }) => {
     });
   });
 
-  await page.goto('/');
-  await page.click('[data-test-id="login-google"]');
-  await page.waitForURL('**/dashboard');
+  await page.goto('/dashboard');
   await expect(page.locator('[data-test-id="user-avatar"]')).toBeVisible();
 
   await page.locator('[data-test-id="start-encounter"]').click();

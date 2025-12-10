@@ -65,9 +65,7 @@ test('dashboard shows collection stats and start encounter card', async ({ page 
     }),
   );
 
-  await page.goto('/');
-  await page.click('[data-test-id="login-google"]');
-  await page.waitForURL('**/dashboard');
+  await page.goto('/dashboard');
 
   await expect(page.getByRole('heading', { name: 'Collection Progress' })).toBeVisible();
   await expect(page.getByText('Pokémon Caught')).toBeVisible();

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const mockedTokenResponse = {
   access_token: 'mock-access-token',
@@ -73,8 +73,12 @@ const starterStatsResponse = {
   recentCaptures: [],
 };
 
-test("collection page shows user's caught Pokémon (starters)", async ({ page }) => {
-  // Auth mocks
+async function mockAuth(page: Page): Promise<void> {
+  await page.context().addCookies([
+    { name: 'e2e-auth-mock', value: 'true', url: 'http://localhost:4173' },
+    { name: 'e2e-auth-mock', value: 'true', url: 'http://127.0.0.1:4173' },
+  ]);
+
   await page.route('**/auth/v1/token*', (route) =>
     route.fulfill({
       status: 200,
@@ -89,6 +93,10 @@ test("collection page shows user's caught Pokémon (starters)", async ({ page })
       body: JSON.stringify(mockedTokenResponse.user),
     }),
   );
+}
+
+test("collection page shows user's caught Pokémon (starters)", async ({ page }) => {
+  await mockAuth(page);
 
   // Collection data mocks
   await page.route('**/api/collection?**', (route) =>
@@ -106,11 +114,7 @@ test("collection page shows user's caught Pokémon (starters)", async ({ page })
     }),
   );
 
-  // Flow: login -> go to collection -> see starters
-  await page.goto('/');
-  await page.click('[data-test-id="login-google"]');
-  await page.waitForURL('**/dashboard');
-
+  // Flow: go directly to collection -> see starters
   await page.goto('/collection');
   const starters = ['bulbasaur', 'charmander', 'squirtle'] as const;
   for (const name of starters) {

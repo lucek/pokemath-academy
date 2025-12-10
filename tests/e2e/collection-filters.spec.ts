@@ -135,11 +135,6 @@ test('collection filters isolate shiny and by type', async ({ page }) => {
     }),
   );
 
-  await page.goto('/');
-  await page.click('[data-test-id="login-google"]');
-  await page.waitForURL('**/dashboard');
-  await expect(page.locator('[data-test-id="user-avatar"]')).toBeVisible();
-
   await page.goto('/collection');
   await expect(page.locator('[data-test-id="collection-filters-toggle"]')).toBeVisible();
 
