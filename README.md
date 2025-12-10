@@ -1,6 +1,7 @@
 # PokéMath 🎯🧮
 
 🌐 Live: <https://www.pokemath.academy/> 🚀
+✅ Actions workflow - <https://github.com/lucek/pokemath-academy/actions/runs/20108585051/>
 
 PokéMath to przeglądarkowa gra edukacyjna łącząca zadania matematyczne z łapaniem Pokémonów. Powstała w trakcie kursu [10xDevs](https://www.10xdevs.pl/) (edycja AI-first), aby ćwiczyć świadome korzystanie z narzędzi AI w produkcyjnym stacku.
 
