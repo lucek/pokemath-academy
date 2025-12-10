@@ -1,0 +1,16 @@
+---
+import PrivateLayout from '@/layouts/PrivateLayout.astro';
+import { PokemonDetailPage } from '@/components/pokemon/PokemonDetailPage';
+
+const paramId = Number(Astro.params.id);
+
+if (!Number.isFinite(paramId) || paramId < 1 || paramId > 151) {
+  return Astro.redirect('/collection');
+}
+
+const title = `PokéMath - Pokémon #${paramId}`;
+---
+
+<PrivateLayout title={title}>
+  <PokemonDetailPage client:load pokemonId={paramId} />
+</PrivateLayout>

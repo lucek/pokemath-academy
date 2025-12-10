@@ -1,0 +1,97 @@
+---
+import '../styles/global.css';
+import { TopNavBarClient } from '@/components/infrastructure/TopNavBarClient';
+import { ErrorBoundary } from '@/components/infrastructure/ErrorBoundary';
+import { ToastContainer } from '@/components/toast/ToastContainer';
+import type { PrivateShellUser } from '@/components/infrastructure/types';
+import pikachuIcon from '@/assets/icons/pikachu.png?url';
+import pokedexIcon from '@/assets/icons/pokedex.png?url';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'PokéMath - Dashboard',
+  description = 'Your personal PokéMath dashboard. Track your progress and start new encounters!',
+} = Astro.props;
+
+const isE2EMockAuth =
+  import.meta.env.E2E_AUTH_MOCK === 'true' || Astro.cookies.get('e2e-auth-mock')?.value === 'true';
+
+let shellUser: PrivateShellUser;
+
+if (isE2EMockAuth) {
+  shellUser = {
+    displayName: 'E2E Trainer',
+    avatarUrl: pokedexIcon,
+  };
+} else {
+  // Check authentication
+  const supabase = Astro.locals.supabase;
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  // Redirect to home if not authenticated
+  if (error || !user) {
+    return Astro.redirect('/');
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('display_name, avatar_url')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (profileError && profileError.code !== 'PGRST116') {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load profile metadata', profileError);
+  }
+
+  shellUser = {
+    displayName: profile?.display_name ?? user.user_metadata?.full_name ?? user.email ?? null,
+    avatarUrl: profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
+  };
+}
+
+const currentPath = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/png" href={pikachuIcon} />
+    <title>{title}</title>
+  </head>
+  <body
+    class="min-h-screen text-slate-100 antialiased"
+    style="
+      --dashboard-bg-image: url('/dashboard_background_day.jpg');
+      background-color: #0a1628;
+      background-image: var(--dashboard-bg-image);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    "
+  >
+    <div class="min-h-screen bg-[rgba(10,22,40,0.65)]">
+      <TopNavBarClient client:load currentPath={currentPath} user={shellUser} />
+      <main class="px-4 py-8 sm:px-6 lg:px-8">
+        <slot />
+      </main>
+    </div>
+    <ErrorBoundary client:load>
+      <ToastContainer />
+    </ErrorBoundary>
+    <script src="/dashboard-background.js" is:inline></script>
+  </body>
+</html>

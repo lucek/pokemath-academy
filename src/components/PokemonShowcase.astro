@@ -1,0 +1,237 @@
+---
+import type { PokemonSpritesDto, PokemonTypeDto } from '../types';
+import { TypeWaveBackground } from '@/components/encounter/TypeWaveBackground';
+
+interface PokemonPreview {
+  id: number;
+  name: string;
+  sprite: string;
+  types: PokemonTypeDto[];
+}
+
+interface RawPokemonRow {
+  id: number;
+  name: string;
+  sprites: unknown;
+  pokemon_types: { slot: number; types: { id: number; name: string } | null }[] | null;
+}
+
+const mapTypes = (relations: RawPokemonRow['pokemon_types']): PokemonTypeDto[] => {
+  if (!Array.isArray(relations)) return [];
+
+  return relations
+    .filter(
+      (relation): relation is { slot: number; types: { id: number; name: string } } =>
+        relation != null &&
+        relation.types != null &&
+        typeof relation.types.id === 'number' &&
+        typeof relation.types.name === 'string',
+    )
+    .map((relation) => ({
+      id: relation.types.id,
+      name: relation.types.name,
+      slot: relation.slot,
+    }))
+    .sort((a, b) => a.slot - b.slot);
+};
+
+const FALLBACK_POKEMON: PokemonPreview[] = [
+  {
+    id: 25,
+    name: 'Pikachu',
+    sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
+    types: [{ id: 13, name: 'electric', slot: 1 }],
+  },
+  {
+    id: 6,
+    name: 'Charizard',
+    sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png',
+    types: [
+      { id: 10, name: 'fire', slot: 1 },
+      { id: 3, name: 'flying', slot: 2 },
+    ],
+  },
+  {
+    id: 9,
+    name: 'Blastoise',
+    sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/9.png',
+    types: [{ id: 11, name: 'water', slot: 1 }],
+  },
+  {
+    id: 3,
+    name: 'Venusaur',
+    sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/3.png',
+    types: [
+      { id: 12, name: 'grass', slot: 1 },
+      { id: 4, name: 'poison', slot: 2 },
+    ],
+  },
+  {
+    id: 150,
+    name: 'Mewtwo',
+    sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png',
+    types: [{ id: 14, name: 'psychic', slot: 1 }],
+  },
+];
+
+// Fetch random Pokemon from database
+const { supabase } = Astro.locals;
+
+// Get 5 random Pokemon from Generation 1 (IDs 1-151)
+const { data: randomPokemon } = await supabase
+  .from('pokemon')
+  .select(
+    `
+      id,
+      name,
+      sprites,
+      pokemon_types (
+        slot,
+        types (
+          id,
+          name
+        )
+      )
+    `,
+  )
+  .gte('id', 1)
+  .lte('id', 151)
+  .order('id', { ascending: true });
+
+// Shuffle and pick 5 random Pokemon
+const shuffled = randomPokemon
+  ? [...(randomPokemon as RawPokemonRow[])].sort(() => Math.random() - 0.5)
+  : [];
+const selectedPokemon = shuffled.slice(0, 5);
+
+const showcasePokemon: PokemonPreview[] = selectedPokemon.map((pokemon) => {
+  const sprites = pokemon.sprites as unknown as PokemonSpritesDto;
+  return {
+    id: pokemon.id,
+    name: pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1),
+    sprite: sprites.front_default,
+    types: mapTypes(pokemon.pokemon_types),
+  };
+});
+
+// Fallback if no Pokemon fetched
+if (showcasePokemon.length === 0) {
+  showcasePokemon.push(...FALLBACK_POKEMON);
+}
+---
+
+<div class="my-8 flex items-end justify-center gap-2 px-2 sm:gap-4 md:my-12 md:gap-6">
+  {
+    showcasePokemon.map((pokemon, index) => {
+      // Center Pokemon (index 2) is largest, others scale down based on distance
+      const scales = [0.7, 0.85, 1, 0.85, 0.7]; // Scale factors for each position
+      const scale = scales[index];
+
+      // Sizes based on scale - smaller on mobile
+      const sizes = {
+        card:
+          scale === 1
+            ? 'w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-52 lg:h-52'
+            : scale === 0.85
+              ? 'w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-40 lg:h-40'
+              : 'w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-32 lg:h-32',
+        sprite:
+          scale === 1
+            ? 'w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-44 lg:h-44'
+            : scale === 0.85
+              ? 'w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-32 lg:h-32'
+              : 'w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24',
+      };
+
+      return (
+        <div
+          class={`group relative ${scale === 1 ? 'pokemon-center' : ''}`}
+          style={{ opacity: 0.6 + scale * 0.4 }}
+        >
+          {/* Card */}
+          <div
+            class={`relative ${sizes.card} flex items-center justify-center overflow-hidden rounded-2xl border transition-all duration-300`}
+            style={{
+              backgroundColor: '#182032',
+              borderColor: scale === 1 ? 'rgba(241, 196, 15, 0.4)' : '#2a3f5f',
+              boxShadow: scale === 1 ? '0 8px 32px rgba(241, 196, 15, 0.2)' : 'none',
+            }}
+          >
+            <TypeWaveBackground types={pokemon.types} className="opacity-80" />
+            {/* Glow effect on hover */}
+            <div
+              class="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              style={{
+                background:
+                  'linear-gradient(135deg, rgba(241, 196, 15, 0.1) 0%, rgba(241, 196, 15, 0.05) 100%)',
+              }}
+            />
+
+            {/* Pokemon sprite */}
+            <img
+              src={pokemon.sprite}
+              alt={pokemon.name}
+              class={`relative z-10 ${sizes.sprite} object-contain drop-shadow-2xl transition-transform duration-300 group-hover:scale-110`}
+              loading="lazy"
+            />
+          </div>
+
+          {/* Pokemon name */}
+          <p
+            class="mt-1 text-center text-xs transition-colors sm:mt-2 sm:text-sm"
+            style={{
+              color: scale === 1 ? '#f1c40f' : '#8b9bb3',
+              fontWeight: scale === 1 ? '600' : '400',
+            }}
+          >
+            {pokemon.name}
+          </p>
+        </div>
+      );
+    })
+  }
+</div>
+
+<style>
+  /* Center Pokemon subtle pulse */
+  .pokemon-center {
+    animation: centerPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes centerPulse {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  @media (min-width: 768px) {
+    @keyframes centerPulse {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-8px);
+      }
+    }
+  }
+
+  .group:hover .text-center {
+    color: #f1c40f;
+  }
+
+  .group:hover > div {
+    border-color: rgba(241, 196, 15, 0.5);
+    box-shadow: 0 4px 20px rgba(241, 196, 15, 0.15);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pokemon-center {
+      animation: none;
+    }
+  }
+</style>

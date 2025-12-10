@@ -1,0 +1,201 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+  unit-tests:
+    name: Unit Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload unit coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: unit-coverage
+          path: coverage/
+
+  e2e-tests:
+    name: E2E Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    environment: integration
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      E2E_AUTH_MOCK: ${{ secrets.E2E_AUTH_MOCK || 'false' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests with coverage
+        env:
+          NODE_V8_COVERAGE: ./coverage-e2e
+        run: npx playwright test --config=playwright.config.e2e.ts
+
+      - name: Upload E2E coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-coverage
+          path: coverage-e2e/
+
+  security-scan:
+    name: Security Scan
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit (high+)
+        run: npm audit --audit-level=high
+
+  coverage-report:
+    name: Coverage Report
+    needs:
+      - unit-tests
+      - e2e-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download unit coverage
+        uses: actions/download-artifact@v5
+        with:
+          name: unit-coverage
+          path: coverage/unit
+
+      - name: Download e2e coverage
+        uses: actions/download-artifact@v5
+        with:
+          name: e2e-coverage
+          path: coverage/e2e
+
+      - name: Bundle coverage
+        run: tar -czf coverage-bundle.tar.gz coverage
+
+      - name: Upload bundled coverage
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-bundle
+          path: coverage-bundle.tar.gz
+
+  status-comment:
+    name: Status Comment
+    needs:
+      - lint
+      - unit-tests
+      - e2e-tests
+      - security-scan
+      - coverage-report
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Add PR status comment
+        uses: actions/github-script@v8
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          UNIT_RESULT: ${{ needs.unit-tests.result }}
+          E2E_RESULT: ${{ needs.e2e-tests.result }}
+          SECURITY_RESULT: ${{ needs.security-scan.result }}
+          COVERAGE_RESULT: ${{ needs.coverage-report.result }}
+        with:
+          script: |
+            const results = {
+              lint: process.env.LINT_RESULT,
+              unit: process.env.UNIT_RESULT,
+              e2e: process.env.E2E_RESULT,
+              security: process.env.SECURITY_RESULT,
+              coverage: process.env.COVERAGE_RESULT,
+            };
+
+            const icon = (status) => {
+              if (status === 'success') return '✅';
+              if (status === 'skipped') return '⚠️';
+              return '❌';
+            };
+
+            const body = [
+              '## Pull Request CI Status',
+              '',
+              `- Lint: ${icon(results.lint)} \`${results.lint}\``,
+              `- Unit Tests: ${icon(results.unit)} \`${results.unit}\``,
+              `- E2E Tests: ${icon(results.e2e)} \`${results.e2e}\``,
+              `- Security Scan: ${icon(results.security)} \`${results.security}\``,
+              `- Coverage Report: ${icon(results.coverage)} \`${results.coverage}\``,
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

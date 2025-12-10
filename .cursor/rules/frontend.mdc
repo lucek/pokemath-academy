@@ -1,0 +1,36 @@
+---
+description: 
+globs: *.tsx,*.astro
+alwaysApply: false
+---
+## Frontend
+
+### General Guidelines
+
+- Use Astro components (`.astro`) for static content and layout.
+- Implement framework components in React only when interactivity is needed.
+
+### Guidelines for Styling
+
+#### Tailwind
+
+- This project uses **Tailwind CSS v4**, with configuration defined mainly in `src/styles/global.css` and the Vite plugin `@tailwindcss/vite` (a classic `tailwind.config.*` file is optional and is not the primary source of truth).
+- Use the `@theme` directive and CSS custom properties to define design tokens (colors, radius, spacing, etc.).
+- Use the `@layer` directive to organize styles into components, utilities, and base layers where needed.
+- Use arbitrary values with square brackets (for example `w-[123px]`) for precise one‑off designs, but prefer tokens defined via `@theme` when possible.
+- Leverage Tailwind variants such as `dark:`, responsive variants (`sm:`, `md:`, `lg:`, etc.), and state variants (`hover:`, `focus-visible`, `active`, etc.) for interactive and adaptive designs.
+
+### Guidelines for Accessibility
+
+#### ARIA Best Practices
+
+- Use ARIA landmarks to identify regions of the page (main, navigation, search, etc.).
+- Apply appropriate ARIA roles to custom interface elements that lack semantic HTML equivalents.
+- Set `aria-expanded` and `aria-controls` for expandable content like accordions and dropdowns.
+- Use `aria-live` regions with appropriate politeness settings for dynamic content updates.
+- Implement `aria-hidden` to hide decorative or duplicative content from screen readers.
+- Apply `aria-label` or `aria-labelledby` for elements without visible text labels.
+- Use `aria-describedby` to associate descriptive text with form inputs or complex elements.
+- Implement `aria-current` for indicating the current item in a set, navigation, or process.
+- Avoid redundant ARIA that duplicates the semantics of native HTML elements.
+

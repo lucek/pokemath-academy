@@ -1,0 +1,111 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# AI Rules for PokeMath
+
+PokeMath is a Pokémon‑themed math training app built with Astro 5, React 19, TypeScript 5, Tailwind 4, shadcn/ui, and Supabase. It focuses on fast, accessible UI (Astro islands + static output), deterministic math‑question generation, and secure per‑user progress storage in Supabase (Postgres with RLS), using local WebP sprites for the first Pokémon generation instead of runtime calls to external APIs.
+
+## Tech Stack
+
+- Astro 5
+- TypeScript 5
+- React 19
+- Tailwind 4
+- Shadcn/ui
+
+## Project Structure
+
+When introducing changes to the project, always follow the directory structure below:
+
+- `./src` - source code
+- `./src/layouts` - Astro layouts
+- `./src/pages` - Astro pages
+- `./src/pages/api` - API endpoints
+- `./src/middleware/index.ts` - Astro middleware
+- `./src/db` - Supabase clients and types
+- `./src/types.ts` - Shared types for backend and frontend (Entities, DTOs)
+- `./src/components` - Client-side components written in Astro (static) and React (dynamic)
+- `./src/components/ui` - Client-side components from Shadcn/ui
+- `./src/lib` - Services and helpers 
+- `./src/assets` - static internal assets
+- `./public` - public assets
+
+When modifying the directory structure, always update this section.
+
+## Coding practices
+
+### Guidelines for clean code
+
+- Use feedback from linters to improve the code when making changes.
+- Prioritize error handling and edge cases.
+- Handle errors and edge cases at the beginning of functions.
+- Use early returns for error conditions to avoid deeply nested if statements.
+- Place the happy path last in the function for improved readability.
+- Avoid unnecessary else statements; use if-return pattern instead.
+- Use guard clauses to handle preconditions and invalid states early.
+- Implement proper error logging and user-friendly error messages.
+- Consider using custom error types or error factories for consistent error handling.
+
+### Guidelines for SUPPORT_LEVEL
+
+#### SUPPORT_EXPERT
+
+- Favor elegant, maintainable solutions over verbose code. Assume understanding of language idioms and design patterns.
+- Highlight potential performance implications and optimization opportunities in suggested code.
+- Frame solutions within broader architectural contexts and suggest design alternatives when appropriate.
+- Focus comments on 'why' not 'what' - assume code readability through well-named functions and variables.
+- Proactively address edge cases, race conditions, and security considerations without being prompted.
+- When debugging, provide targeted diagnostic approaches rather than shotgun solutions.
+- Suggest comprehensive testing strategies rather than just example tests, including considerations for mocking, test organization, and coverage.
+
+### Guidelines for ARCHITECTURE
+
+#### CLEAN_ARCHITECTURE
+
+- Strictly separate code into layers: entities, use cases, interfaces, and frameworks
+- Ensure dependencies point inward, with inner layers having no knowledge of outer layers
+- Implement domain entities that encapsulate {{business_rules}} without framework dependencies
+- Use interfaces (ports) and implementations (adapters) to isolate external dependencies
+- Create use cases that orchestrate entity interactions for specific business operations
+- Implement mappers to transform data between layers to maintain separation of concerns
+
+#### DDD
+
+- Define bounded contexts to separate different parts of the domain with clear boundaries
+- Implement ubiquitous language within each context to align code with business terminology
+- Create rich domain models with behavior, not just data structures, for {{core_domain_entities}}
+- Use value objects for concepts with no identity but defined by their attributes
+- Implement domain events to communicate between bounded contexts
+- Use aggregates to enforce consistency boundaries and transactional integrity
+
+#### MICROSERVICES
+
+- Design services around business capabilities rather than technical functions
+- Implement API gateways to handle cross-cutting concerns for {{client_types}}
+- Use event-driven communication for asynchronous operations between services
+- Implement circuit breakers to handle failures gracefully in distributed systems
+- Design for eventual consistency in data that spans multiple services
+- Implement service discovery and health checks for robust system operation
+
+### Guidelines for VERSION_CONTROL
+
+#### GIT
+
+- Use conventional commits to create meaningful commit messages
+- Use feature branches with descriptive names following {{branch_naming_convention}}
+- Write meaningful commit messages that explain why changes were made, not just what
+- Keep commits focused on single logical changes to facilitate code review and bisection
+- Use interactive rebase to clean up history before merging feature branches
+- Leverage git hooks to enforce code quality checks before commits and pushes
+
+#### GITHUB
+
+- Use pull request templates to standardize information provided for code reviews
+- Implement branch protection rules for {{protected_branches}} to enforce quality checks
+- Configure required status checks to prevent merging code that fails tests or linting
+- Use GitHub Actions for CI/CD workflows to automate testing and deployment
+- Implement CODEOWNERS files to automatically assign reviewers based on code paths
+- Use GitHub Projects for tracking work items and connecting them to code changes
+

@@ -1,0 +1,34 @@
+---
+description: 
+globs: src/pages/*.astro,src/pages/*.ts,src/pages/api/*.ts,src/lib/*.ts,src/db/*.ts,src/middleware/*.ts
+alwaysApply: false
+---
+## Supabase Usage in Astro
+
+### General principles
+
+- Use **Supabase** as the primary backend (authentication + database).
+- As described in `backend.mdc`, in Astro server code use the client exposed on `context.locals.supabase` instead of importing a global client directly.
+- Before wiring integrations, make sure the requirements from `api-supabase-astro-init.mdc` are met (installed package, `database.types.ts`, `supabase/config.toml`).
+
+### Pattern in Astro endpoints
+
+- In endpoints (`src/pages/api/*.ts` or server parts of `.astro` files):
+  - get the client: `const supabase = context.locals.supabase;`
+  - use a typed client (`SupabaseClient<Database>`) according to definitions in `src/db/database.types.ts`,
+  - after each call, check `error` and handle it early (guard clause) with an appropriate HTTP status.
+
+### Security and user data
+
+- Never assume the user is authenticated – always check the session/user identifier when the operation requires it.
+- For sensitive operations (for example inserts, updates, deletes):
+  - rely on Row Level Security (RLS) and policies defined in migrations,
+  - filter by `user_id` **in the database query**, not just in memory.
+
+### Input validation
+
+- Always combine Supabase calls with input validation via Zod (`zod.mdc`):
+  - validate input data first,
+  - then perform Supabase calls,
+  - map both validation errors and Supabase errors to a consistent API response format.
+

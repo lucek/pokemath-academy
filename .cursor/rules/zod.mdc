@@ -1,0 +1,35 @@
+---
+description: 
+globs: src/pages/*.astro,src/pages/*.ts,src/pages/api/*.ts,src/lib/*.ts,src/db/*.ts
+alwaysApply: false
+---
+## Zod Validation
+
+### General guidelines
+
+- Treat **Zod** schemas as the single source of truth for the shape of incoming data from:
+  - HTTP requests (body, query, params),
+  - forms,
+  - external APIs (including Supabase).
+- Always validate data **at the system boundary** (for example in an Astro endpoint handler) before passing it into domain/service layers.
+
+### Defining schemas
+
+- Group schemas by **domain context** (for example `pokemonSchema`, `userSchema`) instead of mixing everything into a single file.
+- Use `z.object({...}).strict()` where you want to reject unexpected fields.
+- For optional values use `z.string().optional()` or `z.string().nullable()` depending on the real‑world contract.
+
+### TypeScript integration
+
+- Generate types from existing schemas: `export type PokemonDto = z.infer<typeof pokemonSchema>`.
+- Do not duplicate type definitions – define a Zod schema → use `z.infer` → use the inferred type in code and function contracts.
+- For complex structures (for example lists, maps) use `z.array`, `z.record`, etc. instead of manual typing.
+
+### Validation in Astro endpoints
+
+- In handlers (`GET`, `POST`, etc.):
+  - read the data (for example `await request.json()`),
+  - validate it with a Zod schema (`schema.parse` or `schema.safeParse`),
+  - on failure, return a consistent error format (for example HTTP 400 + list of field errors).
+- Prefer `safeParse` when building APIs so that you have precise control over how validation errors are returned.
+
