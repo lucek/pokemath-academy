@@ -146,6 +146,16 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Install dependencies (coverage tooling)
+        run: npm ci --omit=optional
+
+      - name: Build E2E coverage summary
+        run: |
+          npx c8 report \
+            --reporter=json-summary \
+            --reports-dir=coverage/e2e/coverage \
+            --temp-directory=coverage/e2e
+
       - name: Generate coverage summary
         id: coverage-summary
         run: |
