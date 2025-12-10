@@ -145,6 +145,21 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Install dependencies (coverage tooling)
+        run: npm ci --omit=optional
+
+      - name: Build E2E coverage summary
+        run: |
+          npx c8 report \
+            --reporter=json-summary \
+            --reporter=json \
+            --reports-dir=coverage/e2e/coverage \
+            --temp-directory=coverage/e2e \
+            --include="src/**" \
+            --exclude="tests/**" \
+            --exclude=".astro/**" \
+            --exclude="node_modules/**"
+
       - name: Generate coverage summary
         id: coverage-summary
         run: |
@@ -173,6 +188,12 @@ jobs:
 
             const summary = JSON.parse(fs.readFileSync(candidate.path, 'utf8'));
             const totals = summary.total;
+            const totalLines = totals?.lines?.total ?? 0;
+            const totalStatements = totals?.statements?.total ?? 0;
+            if (totalLines === 0 && totalStatements === 0) {
+              // No real coverage data; skip to avoid misleading 100% on empty files
+              continue;
+            }
             const suite = {
               label: candidate.label,
               icon: statusIcon(totals?.lines?.pct),

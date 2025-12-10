@@ -1,4 +1,4 @@
-# PokéMath 🎯🧮
+# PokéMath 🧮🎯
 
 🌐 Live: <https://www.pokemath.academy/> 🚀
 
